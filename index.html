@@ -1,60 +1,73 @@
 <!DOCTYPE html>
-<html>
+<html lang="ar" dir="rtl">
 <head>
-  <base target="_top">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
-  <style>
-    :root { color-scheme: light; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 16px; font-family: 'Segoe UI', Tahoma, sans-serif;
-      background: #0f172a; color: #fff; direction: rtl; text-align: center;
-    }
-    h2 { margin: 8px 0 16px; font-size: 20px; }
-    .day-select {
-      display: flex; gap: 8px; justify-content: center; margin-bottom: 20px;
-    }
-    .day-btn {
-      flex: 1; max-width: 110px; padding: 10px 0; border-radius: 10px; border: 2px solid #334155;
-      background: #1e293b; color: #cbd5e1; font-size: 15px; font-weight: bold; cursor: pointer;
-    }
-    .day-btn.active { background: #22c55e; border-color: #22c55e; color: #0f172a; }
-
-    .capture-wrap { max-width: 420px; margin: 0 auto; }
-    #photoInput { display: none; }
-    #captureBtn {
-      width: 100%; padding: 18px 0; border-radius: 16px; border: 2px dashed #334155;
-      background: #1e293b; color: #fff; font-size: 17px; font-weight: bold; cursor: pointer;
-    }
-    #preview { width: 100%; max-width: 420px; margin: 12px auto 0; border-radius: 12px; display: none; }
-    canvas { display: none; }
-
-    #result {
-      max-width: 420px; margin: 18px auto 0; min-height: 70px; border-radius: 14px; padding: 14px;
-      font-size: 17px; font-weight: bold; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 4px; transition: background .2s;
-      background: #1e293b;
-    }
-    .ok { background: #16a34a !important; }
-    .warn { background: #ca8a04 !important; }
-    .err { background: #dc2626 !important; }
-    #sub { font-weight: normal; font-size: 14px; opacity: .85; }
-
-    .manual-label { max-width: 420px; margin: 18px auto 4px; text-align: right; font-size: 13px; color: #94a3b8; }
-    .manual-wrap { max-width: 420px; margin: 0 auto; display: flex; gap: 8px; }
-    #manualInput {
-      flex: 1; padding: 12px; border-radius: 10px; border: 2px solid #334155;
-      background: #1e293b; color: #fff; font-size: 15px; direction: rtl;
-    }
-    #manualBtn {
-      padding: 0 18px; border-radius: 10px; border: none; background: #3b82f6;
-      color: #fff; font-weight: bold; font-size: 15px; cursor: pointer;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>تسجيل الحضور بالـ QR</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px; font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #0f172a; color: #fff; text-align: center;
+  }
+  h2 { margin: 8px 0 16px; font-size: 20px; }
+  .day-select { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; }
+  .day-btn {
+    flex: 1; max-width: 110px; padding: 10px 0; border-radius: 10px; border: 2px solid #334155;
+    background: #1e293b; color: #cbd5e1; font-size: 15px; font-weight: bold; cursor: pointer;
+  }
+  .day-btn.active { background: #22c55e; border-color: #22c55e; color: #0f172a; }
+  #reader-wrap {
+    position: relative; width: 100%; max-width: 420px; margin: 0 auto;
+    border-radius: 16px; overflow: hidden; background: #000;
+  }
+  video, canvas { width: 100%; display: block; }
+  canvas { display: none; }
+  #result {
+    max-width: 420px; margin: 18px auto 0; min-height: 90px; border-radius: 14px; padding: 14px;
+    font-size: 19px; font-weight: bold; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px; transition: background .2s;
+    background: #1e293b;
+  }
+  .ok { background: #16a34a !important; }
+  .warn { background: #ca8a04 !important; }
+  .err { background: #dc2626 !important; }
+  #sub { font-weight: normal; font-size: 14px; opacity: .85; }
+  .manual-label { max-width: 420px; margin: 18px auto 4px; text-align: right; font-size: 13px; color: #94a3b8; }
+  .manual-wrap { max-width: 420px; margin: 0 auto; display: flex; gap: 8px; }
+  #manualInput {
+    flex: 1; padding: 12px; border-radius: 10px; border: 2px solid #334155;
+    background: #1e293b; color: #fff; font-size: 15px;
+  }
+  #manualBtn {
+    padding: 0 18px; border-radius: 10px; border: none; background: #3b82f6;
+    color: #fff; font-weight: bold; font-size: 15px; cursor: pointer;
+  }
+  #setupBox {
+    max-width: 420px; margin: 0 auto 16px; padding: 12px; border-radius: 10px;
+    background: #1e293b; border: 1px solid #334155; text-align: right; font-size: 13px;
+  }
+  #setupBox input {
+    width: 100%; margin-top: 6px; padding: 8px; border-radius: 8px; border: 1px solid #334155;
+    background: #0f172a; color: #fff; font-size: 13px;
+  }
+  #setupBox button {
+    margin-top: 8px; padding: 8px 14px; border-radius: 8px; border: none;
+    background: #22c55e; color: #0f172a; font-weight: bold; cursor: pointer;
+  }
+</style>
 </head>
 <body>
   <h2>تسجيل الحضور بالـ QR</h2>
+
+  <!-- One-time setup: paste your Apps Script Web App URL (the .../exec link) -->
+  <div id="setupBox">
+    رابط الـ Web App (الـ exec link من Apps Script):
+    <input id="execUrlInput" type="text" placeholder="https://script.google.com/macros/s/.../exec" />
+    <button id="saveUrlBtn">حفظ</button>
+  </div>
 
   <div class="day-select">
     <button class="day-btn active" data-day="DAY1">يوم 1</button>
@@ -62,26 +75,42 @@
     <button class="day-btn" data-day="DAY3">يوم 3</button>
   </div>
 
-  <div class="capture-wrap">
-    <input id="photoInput" type="file" accept="image/*" capture="environment" />
-    <button id="captureBtn">📷 صوّر الـ QR</button>
-    <img id="preview" />
+  <div id="reader-wrap">
+    <video id="video" playsinline muted></video>
     <canvas id="canvas"></canvas>
   </div>
 
-  <div id="result">
-    <span>دوس على الزرار وصوّر الـ QR</span>
-  </div>
+  <div id="result"><span>وجّه الكاميرا على الـ QR</span></div>
 
-  <div class="manual-label">أو سجّل يدويًا (ID / رقم موبايل / اسم الطالب)</div>
+  <div class="manual-label">أو سجّل يدويًا (رقم موبايل / اسم الطالب / ID)</div>
   <div class="manual-wrap">
     <input id="manualInput" type="text" placeholder="اكتب هنا..." />
     <button id="manualBtn">تسجيل</button>
   </div>
 
   <script>
-    let currentDay = 'DAY1';
+    // ---------- Setup: Apps Script Web App URL (saved locally on this device/browser) ----------
+    const execUrlInput = document.getElementById('execUrlInput');
+    const setupBox = document.getElementById('setupBox');
+    let EXEC_URL = '';
+    try { EXEC_URL = localStorage.getItem('qrAttendanceExecUrl') || ''; } catch (e) {}
+    if (EXEC_URL) {
+      execUrlInput.value = EXEC_URL;
+      setupBox.style.display = 'none';
+    }
+    document.getElementById('saveUrlBtn').addEventListener('click', () => {
+      const val = execUrlInput.value.trim();
+      if (!val.startsWith('https://script.google.com/')) {
+        alert('حط رابط الـ exec بتاع Apps Script بالظبط');
+        return;
+      }
+      EXEC_URL = val;
+      try { localStorage.setItem('qrAttendanceExecUrl', val); } catch (e) {}
+      setupBox.style.display = 'none';
+    });
 
+    // ---------- Day selector ----------
+    let currentDay = 'DAY1';
     document.querySelectorAll('.day-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
@@ -90,54 +119,63 @@
       });
     });
 
+    // ---------- Result panel ----------
     const resultEl = document.getElementById('result');
     function setResult(html, cls) {
       resultEl.className = cls || '';
       resultEl.innerHTML = html;
     }
 
-    // --- Photo capture (opens the phone's native camera app, no in-page permission needed) ---
-    const photoInput = document.getElementById('photoInput');
-    const captureBtn = document.getElementById('captureBtn');
-    const preview = document.getElementById('preview');
+    // ---------- Live camera + continuous QR scanning ----------
+    const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-    captureBtn.addEventListener('click', () => photoInput.click());
+    let scanning = true;
+    let lastScanTime = 0;
 
-    photoInput.addEventListener('change', () => {
-      const file = photoInput.files[0];
-      if (!file) return;
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(stream => {
+        video.srcObject = stream;
+        video.play();
+        requestAnimationFrame(tick);
+      })
+      .catch(err => {
+        setResult('مش قادر أفتح الكاميرا<div id="sub">' + err.message + '</div>', 'err');
+      });
 
-      const url = URL.createObjectURL(file);
-      preview.src = url;
-      preview.style.display = 'block';
-      setResult('جاري قراءة الـ QR...', '');
-
-      const img = new Image();
-      img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
+    function tick() {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-        if (code) {
-          handleScan(code.data);
-        } else {
-          setResult('❌ مش قادر ألاقي QR في الصورة، جرّب تاني', 'err');
+        if (code && scanning && Date.now() - lastScanTime > 1800) {
+          lastScanTime = Date.now();
+          submitAttendance(code.data);
         }
-        // allow re-selecting the same photo/taking another one
-        photoInput.value = '';
-      };
-      img.src = url;
-    });
+      }
+      requestAnimationFrame(tick);
+    }
 
-    // --- Shared submit logic (used by both photo scan and manual entry) ---
-    function handleScan(text) {
+    // ---------- Send to Apps Script backend ----------
+    function submitAttendance(text) {
+      if (!EXEC_URL) {
+        setResult('لازم تحط رابط الـ Apps Script فوق الأول', 'err');
+        setupBox.style.display = 'block';
+        return;
+      }
+      scanning = false;
       setResult('جاري التسجيل...', '');
-      google.script.run
-        .withSuccessHandler(res => {
+
+      fetch(EXEC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight
+        body: JSON.stringify({ text: text, day: currentDay })
+      })
+        .then(res => res.json())
+        .then(res => {
           if (res.status === 'success') {
             setResult('✅ تم تسجيل الحضور<div id="sub">' + res.name + '</div>', 'ok');
           } else if (res.status === 'already') {
@@ -148,27 +186,24 @@
             setResult('❌ ' + (res.message || 'خطأ'), 'err');
           }
         })
-        .withFailureHandler(err => {
-          setResult('❌ خطأ: ' + err.message, 'err');
+        .catch(err => {
+          setResult('❌ فشل الاتصال بالشيت<div id="sub">' + err.message + '</div>', 'err');
         })
-        .markAttendance(text, currentDay);
+        .finally(() => {
+          setTimeout(() => { scanning = true; setResult('وجّه الكاميرا على الـ QR', ''); }, 2200);
+        });
     }
 
-    // --- Manual entry ---
+    // ---------- Manual entry (same backend, no camera needed) ----------
     const manualInput = document.getElementById('manualInput');
-    const manualBtn = document.getElementById('manualBtn');
-
+    document.getElementById('manualBtn').addEventListener('click', submitManual);
+    manualInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitManual(); });
     function submitManual() {
       const value = manualInput.value.trim();
       if (!value) return;
-      handleScan(value);
+      submitAttendance(value);
       manualInput.value = '';
     }
-
-    manualBtn.addEventListener('click', submitManual);
-    manualInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') submitManual();
-    });
   </script>
 </body>
 </html>
