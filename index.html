@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>تسجيل الحضور بالـ QR</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px; font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #0f172a; color: #fff; text-align: center;
+  }
+  h2 { margin: 8px 0 16px; font-size: 20px; }
+  .day-select { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; }
+  .day-btn {
+    flex: 1; max-width: 110px; padding: 10px 0; border-radius: 10px; border: 2px solid #334155;
+    background: #1e293b; color: #cbd5e1; font-size: 15px; font-weight: bold; cursor: pointer;
+  }
+  .day-btn.active { background: #22c55e; border-color: #22c55e; color: #0f172a; }
+  #reader-wrap {
+    position: relative; width: 100%; max-width: 420px; margin: 0 auto;
+    border-radius: 16px; overflow: hidden; background: #000; min-height: 200px;
+  }
+  video, canvas { width: 100%; display: block; }
+  canvas { display: none; }
+  #result {
+    max-width: 420px; margin: 18px auto 0; min-height: 90px; border-radius: 14px; padding: 14px;
+    font-size: 18px; font-weight: bold; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px; transition: background .2s;
+    background: #1e293b; word-break: break-word;
+  }
+  .ok { background: #16a34a !important; }
+  .warn { background: #ca8a04 !important; }
+  .err { background: #dc2626 !important; }
+  #sub { font-weight: normal; font-size: 13px; opacity: .85; }
+  #debug {
+    max-width: 420px; margin: 8px auto 0; font-size: 12px; color: #64748b; text-align: left;
+    direction: ltr; word-break: break-all;
+  }
+  .manual-label { max-width: 420px; margin: 18px auto 4px; text-align: right; font-size: 13px; color: #94a3b8; }
+  .manual-wrap { max-width: 420px; margin: 0 auto; display: flex; gap: 8px; }
+  #manualInput {
+    flex: 1; padding: 12px; border-radius: 10px; border: 2px solid #334155;
+    background: #1e293b; color: #fff; font-size: 15px;
+  }
+  #manualBtn {
+    padding: 0 18px; border-radius: 10px; border: none; background: #3b82f6;
+    color: #fff; font-weight: bold; font-size: 15px; cursor: pointer;
+  }
+  #setupBox {
+    max-width: 420px; margin: 0 auto 16px; padding: 12px; border-radius: 10px;
+    background: #1e293b; border: 1px solid #334155; text-align: right; font-size: 13px;
+  }
+  #setupBox input {
+    width: 100%; margin-top: 6px; padding: 8px; border-radius: 8px; border: 1px solid #334155;
+    background: #0f172a; color: #fff; font-size: 13px;
+  }
+  #setupBox button {
+    margin-top: 8px; padding: 8px 14px; border-radius: 8px; border: none;
+    background: #22c55e; color: #0f172a; font-weight: bold; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <h2>تسجيل الحضور بالـ QR</h2>
+
+  <div id="setupBox">
+    رابط الـ Web App (الـ exec link من Apps Script):
+    <input id="execUrlInput" type="text" placeholder="https://script.google.com/macros/s/.../exec" />
+    <button id="saveUrlBtn">حفظ</button>
+  </div>
+
+  <div class="day-select">
+    <button class="day-btn active" data-day="DAY1">يوم 1</button>
+    <button class="day-btn" data-day="DAY2">يوم 2</button>
+    <button class="day-btn" data-day="DAY3">يوم 3</button>
+  </div>
+
+  <div id="reader-wrap">
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div id="result"><span>جاري التجهيز...</span></div>
+  <div id="debug"></div>
+
+  <div class="manual-label">أو سجّل يدويًا (رقم موبايل / اسم الطالب / ID)</div>
+  <div class="manual-wrap">
+    <input id="manualInput" type="text" placeholder="اكتب هنا..." />
+    <button id="manualBtn">تسجيل</button>
+  </div>
+
+  <script>
+    // ---------- Setup: Apps Script Web App URL ----------
+    const execUrlInput = document.getElementById('execUrlInput');
+    const setupBox = document.getElementById('setupBox');
+    let EXEC_URL = '';
+    try { EXEC_URL = localStorage.getItem('qrAttendanceExecUrl') || ''; } catch (e) {}
+    if (EXEC_URL) {
+      execUrlInput.value = EXEC_URL;
+      setupBox.style.display = 'none';
+    }
+    document.getElementById('saveUrlBtn').addEventListener('click', () => {
+      const val = execUrlInput.value.trim();
+      if (!val.startsWith('https://script.google.com/')) {
+        alert('حط رابط الـ exec بتاع Apps Script بالظبط');
+        return;
+      }
+      EXEC_URL = val;
+      try { localStorage.setItem('qrAttendanceExecUrl', val); } catch (e) {}
+      setupBox.style.display = 'none';
+    });
+
+    // ---------- Day selector ----------
+    let currentDay = 'DAY1';
+    document.querySelectorAll('.day-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentDay = btn.dataset.day;
+      });
+    });
+
+    // ---------- Result / debug panels ----------
+    const resultEl = document.getElementById('result');
+    const debugEl = document.getElementById('debug');
+    function setResult(html, cls) {
+      resultEl.className = cls || '';
+      resultEl.innerHTML = html;
+    }
+    function setDebug(text) {
+      debugEl.textContent = text;
+    }
+
+    // ---------- Load jsQR with a fallback CDN, and only start the camera once it's ready ----------
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    async function loadJsQR() {
+      const sources = [
+        'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js',
+        'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js',
+        'https://unpkg.com/jsqr@1.4.0/dist/jsQR.js'
+      ];
+      for (const src of sources) {
+        try {
+          await loadScript(src);
+          if (typeof jsQR === 'function') {
+            setDebug('QR library loaded from: ' + src);
+            return true;
+          }
+        } catch (e) { /* try next source */ }
+      }
+      return false;
+    }
+
+    // ---------- Live camera + continuous QR scanning ----------
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    let scanning = true;
+    let lastScanTime = 0;
+
+    async function start() {
+      setResult('جاري تحميل مكتبة قراءة الـ QR...', '');
+      const ok = await loadJsQR();
+      if (!ok) {
+        setResult('❌ مش قادر يحمّل مكتبة قراءة الـQR من الإنترنت<div id="sub">جرّب شبكة تانية (واي فاي/بيانات) أو قولّي وهنلاقي حل تاني</div>', 'err');
+        return;
+      }
+
+      setResult('جاري فتح الكاميرا...', '');
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+        await video.play();
+        setResult('وجّه الكاميرا على الـ QR', '');
+        requestAnimationFrame(tick);
+      } catch (err) {
+        setResult('❌ مش قادر أفتح الكاميرا<div id="sub">' + err.name + ': ' + err.message + '</div>', 'err');
+      }
+    }
+
+    function tick() {
+      try {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          canvas.height = video.videoHeight;
+          canvas.width = video.videoWidth;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+          if (code && scanning && Date.now() - lastScanTime > 1800) {
+            lastScanTime = Date.now();
+            submitAttendance(code.data);
+          }
+        }
+      } catch (err) {
+        setDebug('tick error: ' + err.message);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    // ---------- Send to Apps Script backend (JSONP — bypasses CORS entirely) ----------
+    let jsonpCounter = 0;
+    function submitAttendance(text) {
+      if (!EXEC_URL) {
+        setResult('لازم تحط رابط الـ Apps Script فوق الأول', 'err');
+        setupBox.style.display = 'block';
+        return;
+      }
+      scanning = false;
+      setResult('جاري التسجيل...', '');
+
+      jsonpCounter++;
+      const callbackName = 'qrCallback_' + jsonpCounter + '_' + Date.now();
+      let finished = false;
+
+      function cleanup() {
+        delete window[callbackName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      function finish(html, cls) {
+        if (finished) return;
+        finished = true;
+        setResult(html, cls);
+        setTimeout(() => { scanning = true; setResult('وجّه الكاميرا على الـ QR', ''); }, 2200);
+      }
+
+      window[callbackName] = function (res) {
+        cleanup();
+        if (res.status === 'success') {
+          finish('✅ تم تسجيل الحضور<div id="sub">' + res.name + '</div>', 'ok');
+        } else if (res.status === 'already') {
+          finish('⚠️ مسجل قبل كده<div id="sub">' + res.name + '</div>', 'warn');
+        } else if (res.status === 'notfound') {
+          finish('❌ الطالب مش موجود في الشيت', 'err');
+        } else {
+          finish('❌ ' + (res.message || 'خطأ'), 'err');
+        }
+      };
+
+      const url = EXEC_URL
+        + '?callback=' + encodeURIComponent(callbackName)
+        + '&text=' + encodeURIComponent(text)
+        + '&day=' + encodeURIComponent(currentDay);
+
+      const script = document.createElement('script');
+      script.src = url;
+      script.onerror = function () {
+        cleanup();
+        finish('❌ فشل الاتصال بالشيت (تأكد من رابط الـ exec)', 'err');
+      };
+      document.body.appendChild(script);
+
+      // Safety timeout in case the server never responds
+      setTimeout(() => {
+        if (!finished) {
+          cleanup();
+          finish('❌ الشيت مش بيرد، جرب تاني', 'err');
+        }
+      }, 10000);
+    }
+
+    // ---------- Manual entry ----------
+    const manualInput = document.getElementById('manualInput');
+    document.getElementById('manualBtn').addEventListener('click', submitManual);
+    manualInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitManual(); });
+    function submitManual() {
+      const value = manualInput.value.trim();
+      if (!value) return;
+      submitAttendance(value);
+      manualInput.value = '';
+    }
+
+    start();
+  </script>
+</body>
+</html>
